@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>奶蛙快跑 · Naiwa Run</title>
+<meta name="description" content="奶蛙快跑 — 黄色圆滚滚奶蛙主演的 3D 跑酷小游戏">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='36' r='24' fill='%23F6C945'/%3E%3Ccircle cx='22' cy='14' r='8' fill='white'/%3E%3Ccircle cx='42' cy='14' r='8' fill='white'/%3E%3Ccircle cx='22' cy='14' r='4' fill='%23222'/%3E%3Ccircle cx='42' cy='14' r='4' fill='%23222'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="game-canvas"></canvas>
+
+<!-- 顶部固定按钮（标题屏也可用） -->
+<button id="muteBtn" class="icon-btn" aria-label="静音开关" title="静音">
+  <svg id="soundOnIcon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
+  <svg id="soundOffIcon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" style="display:none"><path d="M3 9v6h4l5 5V4L7 9H3zm13.6 3 2.7-2.7-1.4-1.4-2.7 2.7-2.7-2.7-1.4 1.4L13.8 12l-2.7 2.7 1.4 1.4 2.7-2.7 2.7 2.7 1.4-1.4L16.6 12z"/></svg>
+</button>
+
+<!-- 游戏 HUD -->
+<div id="hud" class="hidden">
+  <div class="hud-left">
+    <div class="hud-score"><span id="scoreVal">0</span><span class="hud-unit">分</span></div>
+    <div class="hud-dist"><span id="distVal">0</span> m</div>
+  </div>
+  <div class="hud-coins"><span class="coin-dot"></span><span id="coinVal">0</span></div>
+  <div class="hud-right">
+    <div id="lives" class="lives"></div>
+    <button id="pauseBtn" class="icon-btn" aria-label="暂停" title="暂停(Esc)">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- 标题 / 角色观察屏 -->
+<div id="titleScreen" class="overlay">
+  <div class="title-card">
+    <h1 class="game-title">奶蛙快跑</h1>
+    <p class="game-sub">NAIWA RUN · 黄色圆滚滚的 3D 跑酷</p>
+    <button id="startBtn" class="big-btn">带奶蛙跑一跑</button>
+    <p class="best-line">历史最高：<span id="bestValTitle">0</span> 分</p>
+    <p class="hint">拖动奶蛙旋转 · 滚轮缩放看看它</p>
+    <div class="controls-hint">
+      <span>← → 换道</span><span>↑ / 空格 跳</span><span>↓ 滑铲</span><span>Esc 暂停</span>
+    </div>
+    <p class="brand-line">军师出品</p>
+  </div>
+</div>
+
+<!-- 暂停屏 -->
+<div id="pauseScreen" class="overlay hidden">
+  <div class="panel">
+    <h2>暂停休息</h2>
+    <p class="pause-sub">奶蛙在原地喘气…</p>
+    <button id="resumeBtn" class="big-btn">继续跑</button>
+    <button id="restartBtnPause" class="ghost-btn">重新开始</button>
+  </div>
+</div>
+
+<!-- 结算屏 -->
+<div id="overScreen" class="overlay hidden">
+  <div class="panel">
+    <h2>跑不动啦！</h2>
+    <div class="result-grid">
+      <div class="result-item"><span class="result-label">本局得分</span><span class="result-num" id="finalScore">0</span></div>
+      <div class="result-item"><span class="result-label">金币</span><span class="result-num" id="finalCoins">0</span></div>
+      <div class="result-item"><span class="result-label">距离</span><span class="result-num"><span id="finalDist">0</span>m</span></div>
+      <div class="result-item"><span class="result-label">历史最高</span><span class="result-num gold" id="bestValOver">0</span></div>
+    </div>
+    <p id="newRecord" class="new-record hidden">新纪录！奶蛙为你鼓掌</p>
+    <button id="againBtn" class="big-btn">再来一局</button>
+    <button id="homeBtn" class="ghost-btn">回标题</button>
+    <p class="brand-line panel-brand">军师出品</p>
+  </div>
+</div>
+
+<!-- 触屏方向按钮 -->
+<div id="touchControls" class="hidden">
+  <button class="touch-btn" id="tLeft" aria-label="左移"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M15 4l-8 8 8 8 2-2-6-6 6-6z"/></svg></button>
+  <button class="touch-btn" id="tDown" aria-label="滑铲"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M4 9l8 8 8-8-2-2-6 6-6-6z"/></svg></button>
+  <button class="touch-btn" id="tUp" aria-label="跳跃"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M4 15l8-8 8 8-2 2-6-6-6 6z"/></svg></button>
+  <button class="touch-btn" id="tRight" aria-label="右移"><svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M9 4l8 8-8 8-2-2 6-6-6-6z"/></svg></button>
+</div>
+
+<div id="glFallback" class="overlay hidden">
+  <div class="panel"><h2>打不开 3D</h2><p>你的浏览器不支持 WebGL，换个现代浏览器再来陪奶蛙跑吧。</p></div>
+</div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>
